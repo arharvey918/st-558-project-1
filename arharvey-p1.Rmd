@@ -13,11 +13,51 @@ library(tidyverse)
 
 This goal of this vignette is to show how to read and summarize a JSON data set in R. The JSON data used in the examples is from the National Hockey League REST API.
 
-## Introduction to JSON
+## JSON 101
 
-Describe JSON data. What is it, where does it get used, and why is it a good way to store data? This
-should be detailed enough that someone that hasn’t seen JSON data would have a good idea what they
-are dealing with. You should link to references where applicable.
+**JSON** (JavaScript Object Notation) is a text-based, lightweight, structured data format that's easy to read and write. It's also easy for computers to read and write! JSON is a very common format used by web-based APIs (i.e., REST APIs) to transfer data between a client and server, and is used to store data in some popular NoSQL databases, such as MongoDB.
+
+The beauty of the JSON format is in its simplicity. The main building block of JSON data is the **name-value pair** (also called key-value pairs). JSON **objects** are made up of zero or more name-value pairs. We'll be working with NHL data, so let's describe the Carolina Hurricanes NHL franchise using the JSON format. JSON objects start with `{` and end with `}`. In between, we can specify name-value pairs, such as `name: "Carolina Hurricanes"`, or `city: "Raleigh"`. Let's combine these ideas to start describing the Carolina Hurricanes as a JSON object:
+
+```
+{
+  name: "Carolina Hurricanes",
+  city: "Raleigh"
+}
+```
+
+You may notice that the two name-value pairs above are separated by a comma (`,`) character. This is how the JSON format is able to tell when one name-value pair ends and another begins. The whitespace (e.g., spaces, line breaks) doesn't matter, but it can make the data easier for humans to read.
+
+Something important to note is that JSON only allows a name to exist at most once within an object. This is something that helps make JSON readable for humans and machines -- if you want to find a name in an object, you can be assured that at most one will exist. Adding a second `city: "Raleigh"` or `city: "Somewhere Else"` pair to the object would be invalid.
+
+In the example so far, I've only used strings as values: "Carolina Hurricanes" and "Raleigh". However, JSON allows for many different types of values: strings, numbers, dates, arrays (we'll get to those), and even other objects! Here's an example that illustrates some of these types:
+
+```
+{
+  name: "Carolina Hurricanes",
+  location: {
+    city: "Raleigh",
+    state: "NC",
+  },
+  num_notable_players: 2,
+  notable_players: ["Ron Francis", "Rod Brind'Amour"]
+}
+```
+
+Now that we see how JSON objects are formed, let's talk about **arrays**. JSON arrays are lists of items. These items can be anything a JSON value can be: strings, numbers, dates, arrays, or objects. In the above example, the value of the`notable_players` key is an array of strings. When querying REST APIs, you'll likely encounter arrays frequently.
+
+Why someone would choose to store their data in JSON format? Here are a few reasons:
+
+- Easy to read and write
+- Data relationships can be nested in the document itself (as opposed to typical RDBMS schemas)
+- Lightweight textual data transfer
+- Parsing/writing supported by many programming languages
+
+These resources provide additional description and examples of JSON:
+
+* https://www.json.org/json-en.html
+* https://www.w3schools.com/js/js_json_intro.asp
+* https://www.infoworld.com/article/3222851/what-is-json-a-better-format-for-data-exchange.html
 
 ## Reading JSON in R
 
