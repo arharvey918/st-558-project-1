@@ -1,0 +1,59 @@
+---
+title: "Reading and Summarizing JSON Data"
+author: "Avy Harvey"
+date: "6/2/2020"
+output: html_document
+#output: rmarkdown::github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+This goal of this vignette is to show how to read and summarize a JSON data set in R. The JSON data used in the examples is from the National Hockey League REST API.
+
+## Introduction to JSON
+
+Describe JSON data. What is it, where does it get used, and why is it a good way to store data? This
+should be detailed enough that someone that hasn’t seen JSON data would have a good idea what they
+are dealing with. You should link to references where applicable.
+
+## Reading JSON in R
+
+Discuss the possible packages/functions that are available for reading JSON data into R. (There are
+three major packages for JSON data.) Choose one and explain why you’ve chosen it.
+
+Let's read some data!
+
+• Write functions to contact the NHL records ‘Franchise’ API (the previous text is a link) and return well-formatted, parsed data:
+– You should have a function to return parsed data from the following calls:
+
+∗ /franchise (Returns id, firstSeasonId and lastSeasonId and name of every team in the history of the NHL)
+
+∗ /franchise-team-totals (Returns Total stats for every franchise (ex roadTies, roadWins, etc))
+
+∗ /site/api/franchise-season-records?cayenneExp=franchiseId=ID (Drill-down into season records for a specific franchise)
+· User should be able to specify the franchise
+
+∗ /franchise-goalie-records?cayenneExp=franchiseId=ID (Goalie records for the specified franchise)
+· User should be able to specify the franchise
+
+∗ /franchise-skater-records?cayenneExp=franchiseId=ID (Skater records, same interaction as goalie endpoint)
+· User should be able to specify the franchise
+
+## Summarizing Data
+
+Once you have the functions to query the data, you should perform a basic exploratory data analysis.
+Not all things reported need to show something interesting or meaningful (i.e. graphs that show no
+relationship are fine) but you should discuss each graph (if you don’t know hockey, that is ok - simply
+discuss the graphs and summaries as best you can). A few requirements are below:
+
+– You should create a new variable at some point
+– You should create some contingency tables and numeric summaries by some of your categorical variables
+– You should create some plots (at least a side-by-side bar plot, side-by-side box plots, and scatterplots with coloring)
+
+### Numeric Summaries
+
+
+### Graphical Summaries
