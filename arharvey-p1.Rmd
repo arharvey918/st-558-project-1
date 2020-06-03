@@ -61,10 +61,21 @@ These resources provide additional description and examples of JSON:
 
 ## Reading JSON in R
 
-Discuss the possible packages/functions that are available for reading JSON data into R. (There are
-three major packages for JSON data.) Choose one and explain why you’ve chosen it.
+Now that you know the basics of JSON, how can JSON data be read in R?
 
-Let's read some data!
+There are three major packages for handling JSON data:
+
+* rjson
+* RJSONIO
+* jsonlite
+
+[This page](https://rstudio-pubs-static.s3.amazonaws.com/31702_9c22e3d1a0c44968a4a1f9656f1800ab.html) shows some examples of using each of the above packages to compare behaviors, and also provides some performance metrics for parsing and writing JSON.
+
+Each of the above packages can parse and write JSON (though each one has its own nuances). The respective methods are named `fromJSON` and `toJSON` in each package. RJSONIO and jsonlite seem to be more full-featured than rjson when it comes to prettifying (inserting whitespace to make JSON more readable for humans) and simplification. rjson is has the fastest performance of the three packages, with RJSONIO being the slowest (by far).
+
+I'll be using jsonlite in the rest of this vignette since it is more full-featured than rjson and better performing than RJSONIO. However, you can probably adapt my examples to either of the other two packages if you like.
+
+After installing the jsonlite package with `install.packages("jsonlite")`, let's read some data!
 
 • Write functions to contact the NHL records ‘Franchise’ API (the previous text is a link) and return well-formatted, parsed data:
 – You should have a function to return parsed data from the following calls:
