@@ -2,7 +2,9 @@
 title: "Reading and Summarizing JSON Data"
 author: "Avy Harvey"
 date: "6/2/2020"
-output: html_document
+output:
+  html_document:
+    toc: true
 #output: rmarkdown::github_document
 ---
 
@@ -61,6 +63,8 @@ These resources provide additional description and examples of JSON:
 
 ## Reading JSON in R
 
+### Packages
+
 Now that you know the basics of JSON, how can JSON data be read in R?
 
 There are three major packages for handling JSON data:
@@ -75,23 +79,141 @@ Each of the above packages can parse and write JSON (though each one has its own
 
 I'll be using jsonlite in the rest of this vignette since it is more full-featured than rjson and better performing than RJSONIO. However, you can probably adapt my examples to either of the other two packages if you like.
 
-After installing the jsonlite package with `install.packages("jsonlite")`, let's read some data!
+### Consuming JSON from the NHL's REST API
 
-• Write functions to contact the NHL records ‘Franchise’ API (the previous text is a link) and return well-formatted, parsed data:
-– You should have a function to return parsed data from the following calls:
+After installing the jsonlite and httr packages with `install.packages(c("jsonlite", "httr"))`, let's read some data!
 
-∗ /franchise (Returns id, firstSeasonId and lastSeasonId and name of every team in the history of the NHL)
+First, load the libraries:
 
-∗ /franchise-team-totals (Returns Total stats for every franchise (ex roadTies, roadWins, etc))
+```{r, message = FALSE}
+library(jsonlite)
+library(httr)
+```
 
-∗ /site/api/franchise-season-records?cayenneExp=franchiseId=ID (Drill-down into season records for a specific franchise)
-· User should be able to specify the franchise
+The base URL where we will be pulling this data from is `https://records.nhl.com/site/api`. All retrievals are HTTP `GET` requests.
 
-∗ /franchise-goalie-records?cayenneExp=franchiseId=ID (Goalie records for the specified franchise)
-· User should be able to specify the franchise
+The following functions can be used to retrieve and parse data from the respective endpoints:
 
-∗ /franchise-skater-records?cayenneExp=franchiseId=ID (Skater records, same interaction as goalie endpoint)
-· User should be able to specify the franchise
+#### Franchises
+
+Gets the list of NHL franchises from the `/franchise` endpoint.
+
+Returns a tibble with `id`, `firstSeasonId`, `lastSeasonId`, and `name` of every team in the history of the NHL.
+
+```{r}
+get_franchises <- function() {
+  base_url <- "https://records.nhl.com/site/api"
+  
+  # Get the list of NHL franchises
+  response <- GET(url = paste0(base_url, "/franchise")) %>%
+    content(as = "text", encoding = "UTF-8") %>%
+    fromJSON()
+  
+  # Get the data attribute from the JSON object
+  as_tibble(response$data)
+}
+
+# Example usage
+get_franchises()
+```
+
+#### Franchise Team Statistics
+
+Gets franchise team total statistics from the `franchise-team-totals` endpoint.
+
+Returns a tibble of total statistics for every franchise (e.g., `roadTies`, `roadWins`, etc.).
+
+```{r}
+get_franchise_stats <- function() {
+  base_url <- "https://records.nhl.com/site/api"
+  
+  # Get the list of NHL franchises
+  response <- GET(url = paste0(base_url, "/franchise-team-totals")) %>%
+    content(as = "text", encoding = "UTF-8") %>%
+    fromJSON()
+  
+  # Get the data attribute from the JSON object
+  as_tibble(response$data)
+}
+
+# Example usage
+get_franchise_stats()
+```
+
+#### Season Records by Franchise
+
+Gets season records for a specific franchise from the `franchise-season-records` endpoint.
+
+Expects a franchise ID to be provided.
+
+Returns a tibble of the season records for the franchise associated with the provided franchise ID.
+
+```{r}
+get_season_records_by_franchise <- function(franchise_id) {
+  base_url <- "https://records.nhl.com/site/api"
+  
+  # Get the list of NHL franchises
+  response <- GET(url = paste0(base_url, "/franchise-season-records?cayenneExp=franchiseId=", franchise_id)) %>%
+    content(as = "text", encoding = "UTF-8") %>%
+    fromJSON()
+  
+  # Get the data attribute from the JSON object
+  as_tibble(response$data)
+}
+
+# Example usage ('26' is the franchise ID for the Carolina Hurricanes)
+get_season_records_by_franchise(26)
+```
+
+#### Goalie Records by Franchise
+
+Gets goalie records for a specific franchise from the `franchise-goalie-records` endpoint.
+
+Expects a franchise ID to be provided.
+
+Returns a tibble of the goalie records for the franchise associated with the provided franchise ID.
+
+```{r}
+get_goalie_records_by_franchise <- function(franchise_id) {
+  base_url <- "https://records.nhl.com/site/api"
+  
+  # Get the list of NHL franchises
+  response <- GET(url = paste0(base_url, "/franchise-goalie-records?cayenneExp=franchiseId=", franchise_id)) %>%
+    content(as = "text", encoding = "UTF-8") %>%
+    fromJSON()
+  
+  # Get the data attribute from the JSON object
+  as_tibble(response$data)
+}
+
+# Example usage ('26' is the franchise ID for the Carolina Hurricanes)
+get_goalie_records_by_franchise(26)
+```
+
+#### Skater Records by Franchise
+
+Gets skater records for a specific franchise from the `franchise-skater-records` endpoint.
+
+Expects a franchise ID to be provided.
+
+Returns a tibble of the skater records for the franchise associated with the provided franchise ID.
+
+```{r}
+get_skater_records_by_franchise <- function(franchise_id) {
+  base_url <- "https://records.nhl.com/site/api"
+  
+  # Get the list of NHL franchises
+  response <- GET(url = paste0(base_url, "/franchise-skater-records?cayenneExp=franchiseId=", franchise_id)) %>%
+    content(as = "text", encoding = "UTF-8") %>%
+    fromJSON()
+  
+  # Get the data attribute from the JSON object
+  as_tibble(response$data)
+}
+
+# Example usage ('26' is the franchise ID for the Carolina Hurricanes)
+get_skater_records_by_franchise(26)
+```
 
 ## Summarizing Data
 
