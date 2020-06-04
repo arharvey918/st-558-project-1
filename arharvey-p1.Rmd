@@ -384,11 +384,6 @@ penalized_stats %>%
 
 I created a quick summary of this variable to try to understand the distribution of average penalty minutes per game across the league, to see if the top ten teams were far and away the worst offenders. I did not find this to to be the case -- the data seems to be just slightly skewed left based on the numeric summary.
 
-
-~~Q: Which has been the best franchise in the Metropolitan Division over the past five seasons?~~
-
-~~Q: Which team has the best active goalie in the Metropolitan Division (by win percentage)?~~
-
 ### Graphical Summaries
 
 In this section, we'll visualize some of this data to try and better understand it. We'll focus on the Carolina Hurricanes franchise for most of this section. Go Canes!
