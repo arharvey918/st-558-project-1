@@ -228,5 +228,128 @@ discuss the graphs and summaries as best you can). A few requirements are below:
 
 ### Numeric Summaries
 
+#### Active Player Positions by Team (Metro Division)
+
+Q: How have teams in the Metropolitan divison allocated their current rosters with respect to skaters?
+
+```{r}
+# Helper function to look up franchise IDs by team common name
+get_franchise_id_by_name <- function(franchise_common_name) {
+  get_franchises() %>%
+    filter(is.na(lastSeasonId) & teamCommonName == franchise_common_name) %>%
+    select(id) %>%
+    pull()
+}
+
+# Teams in the Metro division
+metro_division_names = c("Capitals", "Penguins", "Rangers", "Flyers", 
+                         "Islanders", "Devils", "Blue Jackets", "Hurricanes")
+
+# IDs of the Metro teams
+metro_division_ids <- sapply(metro_division_names, get_franchise_id_by_name)
+
+# Get the skater records for all Metro teams
+metro_skaters_tbl <- lapply(metro_division_ids, get_skater_records_by_franchise) %>%
+  bind_rows()
+
+# We only want active players in this report
+metro_skaters_tbl %>%
+  filter(activePlayer == TRUE) %>%
+  select(franchiseName, positionCode) %>%
+  table(dnn = c("Franchise Name", "Position")) %>%
+  addmargins() %>%
+  knitr::kable(caption = "Player Positions by Franchise")
+```
+
+The contingency table above shows the positions of all the active players for the respective franchises. Note this data includes players who played an NHL game but may now be playing in a minor league affliate (e.g., AHL or EHCL) of the franchise, since an NHL active roster can only have 23 players. From this table, I noticed a few things:
+
+* Most teams are loaded with centermen (particularly the Columbus Blue Jackets and Pittsburgh Penguins)
+* Overall, these teams invest in more left wings than right wings
+* The Washington Capitals and NY Islanders don't have to pull in as many minor-league reserves as other teams
+  * This difference mostly appears to be with the number of centermen
+* The Carolina Hurricanes have the fewest skaters at any one position with just 6 right wings
+
+#### Player Position vs. Tenure with Carolina
+
+Q: Is there a relationship between a player's position and the number of seasons they spent with the Carolina Hurricanes?
+
+```{r}
+# '26' is the franchise ID for the Carolina Hurricanes
+carolina_skater_records <- get_skater_records_by_franchise(26)
+
+carolina_skater_records %>%
+  select(positionCode, seasons) %>%
+  mutate(seasons = factor(case_when(  # Bin the seasons to make it a categorical variable
+    seasons >= 10 ~ ">= 10",
+    seasons >= 6 ~ "6-9",
+    seasons >= 3 ~ "3-5",
+    seasons < 3 ~ "< 3"
+  ), levels = c("< 3", "3-5", "6-9", ">= 10"))) %>%
+  mutate(positionCode = case_when(  # Rename the positions for readability
+    positionCode == "C" ~ "Center",
+    positionCode == "L" ~ "Left Wing",
+    positionCode == "R" ~ "Right Wing",
+    positionCode == "D" ~ "Defenseman"
+  )) %>%
+  table(dnn = c("Position", "Number of Seasons")) %>%  # Create a contingency table
+  addmargins() %>%  # Add column and row totals to the contingency table
+  knitr::kable(caption = "Number of Seasons with Carolina Hurricanes by Player Position")
+```
+
+From the contingency table above, we can see that proportionally, skaters who play Right Wing are most likely to have short careers with the Carolina Hurricanes. Those who play Left Wing or Center ore most likely to have longer careers with the Hurricanes. The number of defensemen is higher than the other positions across most of the categories, but this is likely because there are usually two defensemen in a lineup, to go along with the three forwards (center, left and right wings), and the goalie. Very few players have spent more than 10 seasons with the Hurricanes.
+
+#### Most Penalized Teams
+
+Q: What are the top 10 active teams that have been penalized the most in the regular season?
+
+```{r}
+franchises <- get_franchises()
+franchise_stats <- get_franchise_stats()
+
+penalized_stats <-
+  franchise_stats %>%
+  filter(gameTypeId == 2 & is.na(lastSeasonId)) %>%  # Regular season only
+  # New variable: penalty minutes per game
+  mutate(avgPenaltyMinutesPerGame = penaltyMinutes / gamesPlayed) %>%
+  arrange(desc(avgPenaltyMinutesPerGame)) %>%
+  select(teamName, avgPenaltyMinutesPerGame)
+
+penalized_stats %>%
+  head(10) %>%
+  knitr::kable(col.names = c("Team Name", "Average Penalty Minutes Per Game"))
+```
+
+In the above example, I've computed the average number of penalty minutes per game for the currently active NHL teams. It's interesting to see how the top five teams are composed of the two Pennsylvania teams and three Canadian teams! The Flyers are in a class of their own when it comes to average penalty minutes. One thing this data does not show is when (i.e., what season) those penalty minutes were given; it would be interesting to see that data broken down by year so we could see the shape of the distribution. 
+
+```{r}
+# Quartile functions
+q1 <- function(x) { quantile(x, 0.25)[[1]] }
+q3 <- function(x) { quantile(x, 0.75)[[1]] }
+
+penalized_stats %>%
+  select(avgPenaltyMinutesPerGame) %>%
+  summarise_all(list("Min." = min,
+                     "1st Qu." = q1,
+                     "Median" = median,
+                     "Mean" = mean,
+                     "3rd Qu." = q3,
+                     "Max" = max,
+                     "Standard Dev." = sd)) %>%
+  knitr::kable(caption = "Summary of Average Penalty Minutes Per Game")
+```
+
+I created a quick summary of this variable to try to understand the distribution of average penalty minutes per game across the league, to see if the top ten teams were far and away the worst offenders. I did not find this to to be the case -- the data seems to be just slightly skewed left based on the numeric summary.
+
+
+~~Q: Which has been the best franchise in the Metropolitan Division over the past five seasons?~~
+
+~~Q: Which team has the best active goalie in the Metropolitan Division (by win percentage)?~~
 
 ### Graphical Summaries
+
+Q: Is there a relationship between a skater's position and the number of goals they score? What about assists? (side-by-side bar plot)
+
+Q: Is there a relationship between how many assists a skater has and how many goals they score, by position? (scatterplot)
+
+Q: Which team has the best offense in the Metropolitan Division? (boxplot)
+
