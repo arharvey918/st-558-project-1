@@ -142,7 +142,7 @@ get_franchise_stats()
 
 #### Season Records by Franchise
 
-Gets season records for a specific franchise from the `franchise-season-records` endpoint.
+Gets season records for a specific franchise from the `/franchise-season-records` endpoint.
 
 Expects a franchise ID to be provided.
 
@@ -167,7 +167,7 @@ get_season_records_by_franchise(26)
 
 #### Goalie Records by Franchise
 
-Gets goalie records for a specific franchise from the `franchise-goalie-records` endpoint.
+Gets goalie records for a specific franchise from the `/franchise-goalie-records` endpoint.
 
 Expects a franchise ID to be provided.
 
@@ -192,7 +192,7 @@ get_goalie_records_by_franchise(26)
 
 #### Skater Records by Franchise
 
-Gets skater records for a specific franchise from the `franchise-skater-records` endpoint.
+Gets skater records for a specific franchise from the `/franchise-skater-records` endpoint.
 
 Expects a franchise ID to be provided.
 
@@ -214,6 +214,33 @@ get_skater_records_by_franchise <- function(franchise_id) {
 # Example usage ('26' is the franchise ID for the Carolina Hurricanes)
 get_skater_records_by_franchise(26)
 ```
+
+#### Players by Team
+
+Gets the players for a specific team from the `/player/byTeam/{teamId}` endpoint.
+
+Expects a team ID to be provided.
+
+Returns a tibble of the players for the team associated with the provided team ID.
+
+```{r}
+get_players_by_franchise <- function(franchise_id) {
+  base_url <- "https://records.nhl.com/site/api"
+  
+  # Get the list of NHL franchises
+  response <- GET(url = paste0(base_url, "/player/byTeam/", franchise_id)) %>%
+    content(as = "text", encoding = "UTF-8") %>%
+    fromJSON()
+  
+  # Get the data attribute from the JSON object
+  as_tibble(response$data)
+}
+
+# Example usage ('12' is the team ID for the Carolina Hurricanes)
+get_players_by_franchise(12) %>%
+  filter(onRoster == "Y")
+```
+
 
 ## Summarizing Data
 
@@ -241,33 +268,50 @@ get_franchise_id_by_name <- function(franchise_common_name) {
     pull()
 }
 
+get_team_id_by_name <- function(franchise_common_name) {
+  get_franchises() %>%
+    filter(is.na(lastSeasonId) & teamCommonName == franchise_common_name) %>%
+    select(mostRecentTeamId) %>%
+    pull()
+}
+
 # Teams in the Metro division
 metro_division_names = c("Capitals", "Penguins", "Rangers", "Flyers", 
                          "Islanders", "Devils", "Blue Jackets", "Hurricanes")
 
-# IDs of the Metro teams
-metro_division_ids <- sapply(metro_division_names, get_franchise_id_by_name)
+# IDs of the Metro franchises
+metro_division_franchise_ids <- sapply(metro_division_names, get_franchise_id_by_name)
+metro_division_team_ids <- sapply(metro_division_names, get_team_id_by_name)
 
 # Get the skater records for all Metro teams
-metro_skaters_tbl <- lapply(metro_division_ids, get_skater_records_by_franchise) %>%
+metro_skater_records_tbl <- lapply(metro_division_franchise_ids, get_skater_records_by_franchise) %>%
   bind_rows()
 
-# We only want active players in this report
-metro_skaters_tbl %>%
-  filter(activePlayer == TRUE) %>%
+# Get only the players on the NHL roster for all Metro teams
+metro_players_tbl <- lapply(metro_division_team_ids, get_players_by_franchise) %>%
+  bind_rows() %>%
+  filter(onRoster == "Y") %>%
+  left_join(get_franchises() %>%
+              select(id, mostRecentTeamId) %>%
+              rename(franchiseId = id),
+            by = c("currentTeamId" = "mostRecentTeamId"))
+
+# We only want active players who still play for the franchise in this report
+metro_skater_records_tbl %>%
+  semi_join(metro_players_tbl, by = c("playerId" = "id", "franchiseId" = "franchiseId")) %>%
   select(franchiseName, positionCode) %>%
   table(dnn = c("Franchise Name", "Position")) %>%
   addmargins() %>%
-  knitr::kable(caption = "Player Positions by Franchise")
+  knitr::kable(caption = "Skater Positions by Franchise")
 ```
 
-The contingency table above shows the positions of all the active players for the respective franchises. Note this data includes players who played an NHL game but may now be playing in a minor league affliate (e.g., AHL or EHCL) of the franchise, since an NHL active roster can only have 23 players. From this table, I noticed a few things:
+The contingency table above shows the positions of all the active players for the respective franchises. Note this data includes players who have short-term injuries, as well as those who have been called up from a minor league team (e.g., AHL or EHCL) to temporarily take their place. From this table, I noticed a few things:
 
-* Most teams are loaded with centermen (particularly the Columbus Blue Jackets and Pittsburgh Penguins)
-* Overall, these teams invest in more left wings than right wings
-* The Washington Capitals and NY Islanders don't have to pull in as many minor-league reserves as other teams
-  * This difference mostly appears to be with the number of centermen
-* The Carolina Hurricanes have the fewest skaters at any one position with just 6 right wings
+* The Columbus Blue Jackets and Pittsburgh Penguins are loaded with centermen (possibly due to short-term injuries, but it could also be strategy)
+  * It's somewhat surprising that the number of centermen is almost the same as the number of defensemen
+* Overall, these teams invest a little more in left wings than right wings
+  * Right wings have the smallest individual number of any position on most teams
+* The teams with more than 21 players likely have several short-term injuries, since the two goalies on each team would bring the roster to 23 if everyone was able to play
 
 #### Player Position vs. Tenure with Carolina
 
@@ -347,9 +391,68 @@ I created a quick summary of this variable to try to understand the distribution
 
 ### Graphical Summaries
 
-Q: Is there a relationship between a skater's position and the number of goals they score? What about assists? (side-by-side bar plot)
+In this section, we'll visualize some of this data to try and better understand it. We'll focus on the Carolina Hurricanes franchise for most of this section. Go Canes!
 
-Q: Is there a relationship between how many assists a skater has and how many goals they score, by position? (scatterplot)
+#### Skater Position vs. Goals Scored
 
-Q: Which team has the best offense in the Metropolitan Division? (boxplot)
+Q: Is there a relationship between a skater's position and the number of goals they score? What about assists?
+
+```{r}
+# First, get the data into a form that can be easily graphed
+carolina_skater_records %>%
+  select(positionCode, goals, assists) %>%
+  pivot_longer(c("goals", "assists"),
+               names_to = "pointType", values_to = "value") %>%
+  group_by(positionCode, pointType) %>%
+  summarise("sum" = sum(value)) %>%
+
+  # Now graph it!
+  ggplot(aes(x = positionCode, y = sum, fill = pointType)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Points by Player Position",
+       x = "Player Position",
+       y = "Points")
+```
+
+In the above bar plot, we can see how many goals and assists were scored by Carolina Hurricanes skaters based on their position. Unsurprisingly, the forwards (centers, left and right wings) scored the most goals. Defensemen lag way behind, which makes sense. However, something that I find surprising (I don't watch a lot of hockey) is that defensemen are second only to centers in assists, beating out both left and right wings. This could be because they can feed breakaway goals for forwards, or they're most active on assists during power plays.
+
+#### Assists vs. Goals Scored by Position
+
+Q: Is there a relationship between how many assists a skater has and how many goals they score, by position?
+
+```{r}
+carolina_skater_records %>%
+  filter(goals < 300) %>%  # Filter out the outliers
+  ggplot(aes(x = assists, y = goals, color = positionCode)) +
+  geom_smooth(method = lm, formula = y ~ x, alpha = 0.25) +
+  geom_point(alpha = .5) +
+  labs(title = "Goals vs. Assists by Player Position",
+       x = "Assists", y = "Goals")
+
+```
+
+This graph gives us a different view of goals and assists by position. Here we're able to see how individual players performed to see if the patterns we saw in the last graph make sense. We definitely are able to see the same pattern for defensemen here: they tend to assist on many more goals per goal scored as evidenced by the slope of the linear regression model. Somewhat surprisingly, Centermen look like they are more likely to assist on goals than they are to score (as compared to left and right wings) as evidenced by the slope estimate.
+
+#### Best Offense in the Metropolitan Division
+
+Q: Which team has the best offense in the Metropolitan Division?
+
+```{r}
+# We only want active players who still play for the franchise in this graph
+metro_skater_records_tbl %>%
+  semi_join(metro_players_tbl, by = c("playerId" = "id", "franchiseId" = "franchiseId")) %>%
+  filter(positionCode %in% c("C", "L", "R")) %>%  # Only look at forwards
+  select(franchiseName, points) %>%
+  # fct_reorder idea from https://rpubs.com/crazyhottommy/reorder-boxplot
+  ggplot(aes(x = fct_reorder(franchiseName, points, .fun = median), y = points)) +
+  geom_boxplot(aes(fill = franchiseName), alpha = 0.25) +
+  geom_jitter(size = 1, alpha = 1, aes(color = franchiseName)) +
+  labs(title = "Points by Franchise",
+       x = "Franchise Name",
+       y = "Points") +
+  coord_flip() +  # Put it on its side so we can see the labels
+  theme(legend.position="none")  # Remove legend
+```
+
+Looking at the points that the forwards on each team has scored, the Washington Captials look to have the best forwards of any team in the Metropolitan Division. However, the mean is influenced by some pretty big outliers. Something interesting to note is that the NY Islanders and the NJ Devils are the only teams in the division with left-skewed distributions. All other teams are right-skewed, and some are very much right-skewed (looking at you, Blue Jackets).
 
