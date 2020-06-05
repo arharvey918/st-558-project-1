@@ -451,3 +451,28 @@ metro_skater_records_tbl %>%
 
 Looking at the points that the forwards on each team has scored, the Washington Captials look to have the best forwards of any team in the Metropolitan Division. However, the mean is influenced by some pretty big outliers. Something interesting to note is that the NY Islanders and the NJ Devils are the only teams in the division with left-skewed distributions. All other teams are right-skewed, and some are very much right-skewed (looking at you, Blue Jackets).
 
+#### Best Goalies in the Metropolitan Division
+
+Q: Which teams in the Metropolitan Division have had the best goalies?
+
+```{r}
+# Get the goalie records for all Metro teams
+metro_goalie_records_tbl <- lapply(metro_division_franchise_ids, get_goalie_records_by_franchise) %>%
+  bind_rows()
+
+metro_goalie_records_tbl %>%
+  filter(gamesPlayed > 50) %>%
+  mutate(winPct = wins / gamesPlayed,
+         activePlayerAlpha = if_else(activePlayer == TRUE, 2, 1)) %>%
+  select(winPct, franchiseName, activePlayerAlpha, activePlayer) %>%
+  ggplot(aes(x = fct_reorder(franchiseName, winPct, .fun = median), y = winPct)) +
+  geom_boxplot(aes(fill = franchiseName), alpha = 0.25) +
+  geom_jitter(aes(color = franchiseName, alpha = activePlayer)) +
+  scale_alpha_discrete(range=c(0.25, 1)) +
+  labs(title = "Goalie Win Rate by Franchise",
+       x = "Franchise Name",
+       y = "Goalie Win Rate") +
+  coord_flip()
+```
+
+Since I've focused on offense, I thought I should be fair and summarize some defensive data. I created a list of all of the records of goalies who have played on a team in the Metropolitan division (all-time). I only considered goalies who had played in more than 50 games for a team.
