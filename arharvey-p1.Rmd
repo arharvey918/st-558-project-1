@@ -3,8 +3,9 @@ title: "Reading and Summarizing JSON Data"
 author: "Avy Harvey"
 date: "6/2/2020"
 output:
-  html_document:
-    toc: true
+#  html_document:
+#    toc: true
+  rmarkdown::github_document:
 #output: rmarkdown::github_document
 ---
 
@@ -455,13 +456,13 @@ Looking at the points that the forwards on each team has scored, the Washington 
 
 Q: Which teams in the Metropolitan Division have had the best goalies?
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # Get the goalie records for all Metro teams
 metro_goalie_records_tbl <- lapply(metro_division_franchise_ids, get_goalie_records_by_franchise) %>%
   bind_rows()
 
 metro_goalie_records_tbl %>%
-  filter(gamesPlayed > 50) %>%
+  filter(gamesPlayed >= 41) %>%  # Goalies must have played at least 41 games
   mutate(winPct = wins / gamesPlayed,
          activePlayerAlpha = if_else(activePlayer == TRUE, 2, 1)) %>%
   select(winPct, franchiseName, activePlayerAlpha, activePlayer) %>%
@@ -475,4 +476,8 @@ metro_goalie_records_tbl %>%
   coord_flip()
 ```
 
-Since I've focused on offense, I thought I should be fair and summarize some defensive data. I created a list of all of the records of goalies who have played on a team in the Metropolitan division (all-time). I only considered goalies who had played in more than 50 games for a team.
+Since I've done a lot of summaries of offensive data, I thought I should be fair and summarize some defensive data. I created a list of all of the records of goalies who have played on a team in the Metropolitan division (all-time) to try an determine which franchises have historically had the best goalies as determined by win percentage: wins divided by games played. In this comparison, I only considered goalies who had played in at least 41 games for a team (half of the games in one NHL season). I also show if a player is currently active in the NHL with the opacity of the point in the scatterplot.
+
+In looking at this data, it is apparent that the Flyers have historically had good goalies, with a mean win percentage that is significantly greater than the rest of the division. We can also tell that the Blue Jackets and Devils have not had quite as much success with goalies, with means that are smaller than the rest of the division.
+
+The Hurricanes have had the goalie with the highest win percentage. I dug further into this data to see who it was, and I found that it was Martin Gerber, who won the Stanley Cup with the Hurricanes in 2006. The Captials had the goalie with the worst win percentage, Michel Belhumeur, who had zero wins in the 42 games he played with the franchise. However, they also have the goalie with the highest win percentage who is currently active in the NHL: Braden Holtby.
