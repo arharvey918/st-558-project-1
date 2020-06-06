@@ -3,6 +3,15 @@ Reading and Summarizing JSON Data
 Avy Harvey
 6/2/2020
 
+  - [JSON 101](#json-101)
+  - [Reading JSON in R](#reading-json-in-r)
+      - [Packages](#packages)
+      - [Consuming JSON from the NHL’s REST
+        API](#consuming-json-from-the-nhls-rest-api)
+  - [Summarizing Data](#summarizing-data)
+      - [Numeric Summaries](#numeric-summaries)
+      - [Graphical Summaries](#graphical-summaries)
+
 This goal of this vignette is to show how to read and summarize a JSON
 data set in R. The JSON data used in the examples is from the National
 Hockey League REST API.
