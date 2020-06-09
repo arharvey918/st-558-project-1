@@ -1,7 +1,7 @@
 Reading and Summarizing JSON Data
 ================
 Avy Harvey
-6/2/2020
+6/8/2020
 
   - [JSON 101](#json-101)
   - [Reading JSON in R](#reading-json-in-r)
@@ -76,7 +76,7 @@ above example, the value of the`notable_players` key is an array of
 strings. When querying REST APIs, you’ll likely encounter arrays
 frequently.
 
-Why someone would choose to store their data in JSON format? Here are a
+Why would someone choose to store their data in JSON format? Here are a
 few reasons:
 
   - Easy to read and write
@@ -110,7 +110,7 @@ behaviors, and also provides some performance metrics for parsing and
 writing JSON.
 
 Each of the above packages can parse and write JSON (though each one has
-its own nuances). The respective methods are named `fromJSON` and
+its own nuances). The respective functions are named `fromJSON` and
 `toJSON` in each package. RJSONIO and jsonlite seem to be more
 full-featured than rjson when it comes to prettifying (inserting
 whitespace to make JSON more readable for humans) and simplification.
@@ -192,7 +192,7 @@ Returns a tibble of total statistics for every franchise (e.g.,
 get_franchise_stats <- function() {
   base_url <- "https://records.nhl.com/site/api"
   
-  # Get the list of NHL franchises
+  # Get the franchise team stats
   response <- GET(url = paste0(base_url, "/franchise-team-totals")) %>%
     content(as = "text", encoding = "UTF-8") %>%
     fromJSON()
@@ -240,7 +240,7 @@ the provided franchise ID.
 get_season_records_by_franchise <- function(franchise_id) {
   base_url <- "https://records.nhl.com/site/api"
   
-  # Get the list of NHL franchises
+  # Get the season records for a franchise
   response <- GET(url = paste0(base_url, "/franchise-season-records?cayenneExp=franchiseId=", franchise_id)) %>%
     content(as = "text", encoding = "UTF-8") %>%
     fromJSON()
@@ -291,7 +291,7 @@ the provided franchise ID.
 get_goalie_records_by_franchise <- function(franchise_id) {
   base_url <- "https://records.nhl.com/site/api"
   
-  # Get the list of NHL franchises
+  # Get the goalie records for a franchise
   response <- GET(url = paste0(base_url, "/franchise-goalie-records?cayenneExp=franchiseId=", franchise_id)) %>%
     content(as = "text", encoding = "UTF-8") %>%
     fromJSON()
@@ -340,7 +340,7 @@ the provided franchise ID.
 get_skater_records_by_franchise <- function(franchise_id) {
   base_url <- "https://records.nhl.com/site/api"
   
-  # Get the list of NHL franchises
+  # Get the skater records for a franchise
   response <- GET(url = paste0(base_url, "/franchise-skater-records?cayenneExp=franchiseId=", franchise_id)) %>%
     content(as = "text", encoding = "UTF-8") %>%
     fromJSON()
@@ -387,11 +387,11 @@ Returns a tibble of the players for the team associated with the
 provided team ID.
 
 ``` r
-get_players_by_franchise <- function(franchise_id) {
+get_players_by_franchise <- function(team_id) {
   base_url <- "https://records.nhl.com/site/api"
   
-  # Get the list of NHL franchises
-  response <- GET(url = paste0(base_url, "/player/byTeam/", franchise_id)) %>%
+  # Get the list of players by team
+  response <- GET(url = paste0(base_url, "/player/byTeam/", team_id)) %>%
     content(as = "text", encoding = "UTF-8") %>%
     fromJSON()
   
@@ -451,18 +451,9 @@ get_players_by_franchise(12) %>%
 
 ## Summarizing Data
 
-Once you have the functions to query the data, you should perform a
-basic exploratory data analysis. Not all things reported need to show
-something interesting or meaningful (i.e. graphs that show no
-relationship are fine) but you should discuss each graph (if you don’t
-know hockey, that is ok - simply discuss the graphs and summaries as
-best you can). A few requirements are below:
-
-– You should create a new variable at some point – You should create
-some contingency tables and numeric summaries by some of your
-categorical variables – You should create some plots (at least a
-side-by-side bar plot, side-by-side box plots, and scatterplots with
-coloring)
+Now that we have functions to pull the data, we can do some exploratory
+data analysis. We’ll start with some contingency tables and move on to
+graphs afterwards.
 
 ### Numeric Summaries
 
@@ -480,6 +471,7 @@ get_franchise_id_by_name <- function(franchise_common_name) {
     pull()
 }
 
+# Helper funciton to look up team IDs by team common name
 get_team_id_by_name <- function(franchise_common_name) {
   get_franchises() %>%
     filter(is.na(lastSeasonId) & teamCommonName == franchise_common_name) %>%
@@ -540,15 +532,16 @@ place. From this table, I noticed a few things:
   - The Columbus Blue Jackets and Pittsburgh Penguins are loaded with
     centermen (possibly due to short-term injuries, but it could also be
     strategy)
-      - It’s somewhat surprising that the number of centermen is almost
-        the same as the number of defensemen
+      - It’s somewhat surprising that the total number of centermen
+        across the division is almost the same as the number of
+        defensemen
   - Overall, these teams invest a little more in left wings than right
     wings
       - Right wings have the smallest individual number of any position
         on most teams
   - The teams with more than 21 players likely have several short-term
     injuries, since the two goalies on each team would bring the roster
-    to 23 if everyone was able to play
+    to 23 (max in the NHL) if everyone was able to play
 
 #### Player Position vs. Tenure with Carolina
 
@@ -595,7 +588,7 @@ likely to have longer careers with the Hurricanes. The number of
 defensemen is higher than the other positions across most of the
 categories, but this is likely because there are usually two defensemen
 in a lineup, to go along with the three forwards (center, left and right
-wings), and the goalie. Very few players have spent more than 10 seasons
+wings), and the goalie. Very few players have spent 10 or more seasons
 with the Hurricanes.
 
 #### Most Penalized Teams
@@ -615,6 +608,7 @@ penalized_stats <-
   arrange(desc(avgPenaltyMinutesPerGame)) %>%
   select(teamName, avgPenaltyMinutesPerGame)
 
+# Only show the top 10
 penalized_stats %>%
   head(10) %>%
   knitr::kable(col.names = c("Team Name", "Average Penalty Minutes Per Game"))
@@ -647,6 +641,7 @@ shape of the distribution.
 q1 <- function(x) { quantile(x, 0.25)[[1]] }
 q3 <- function(x) { quantile(x, 0.75)[[1]] }
 
+# Summarize penalty minutes per game
 penalized_stats %>%
   select(avgPenaltyMinutesPerGame) %>%
   summarise_all(list("Min." = min,
@@ -707,10 +702,10 @@ In the above bar plot, we can see how many goals and assists were scored
 by Carolina Hurricanes skaters based on their position. Unsurprisingly,
 the forwards (centers, left and right wings) scored the most goals.
 Defensemen lag way behind, which makes sense. However, something that I
-find surprising (I don’t watch a lot of hockey) is that defensemen are
-second only to centers in assists, beating out both left and right
-wings. This could be because they can feed breakaway goals for forwards,
-or they’re most active on assists during power plays.
+find surprising (caveat: I don’t watch a lot of hockey) is that
+defensemen are second only to centers in assists, beating out both left
+and right wings. This could be because they can feed breakaway goals for
+forwards, or they’re most active on assists during power plays.
 
 #### Assists vs. Goals Scored by Position
 
@@ -780,9 +775,8 @@ metro_goalie_records_tbl <- lapply(metro_division_franchise_ids, get_goalie_reco
 
 metro_goalie_records_tbl %>%
   filter(gamesPlayed >= 41) %>%  # Goalies must have played at least 41 games
-  mutate(winPct = wins / gamesPlayed,
-         activePlayerAlpha = if_else(activePlayer == TRUE, 2, 1)) %>%
-  select(winPct, franchiseName, activePlayerAlpha, activePlayer) %>%
+  mutate(winPct = wins / gamesPlayed) %>%  # Calculate win percentage
+  select(winPct, franchiseName, activePlayer) %>%
   ggplot(aes(x = fct_reorder(franchiseName, winPct, .fun = median), y = winPct)) +
   geom_boxplot(aes(fill = franchiseName), alpha = 0.25) +
   geom_jitter(aes(color = franchiseName, alpha = activePlayer)) +
